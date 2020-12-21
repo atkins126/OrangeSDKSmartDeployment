@@ -22,7 +22,7 @@ uses
   Types,
   FMX.Graphics,
   FMX.Types,
-  uFuncCommon,
+  uFuncCommon_Copy,
 
   Winapi.GDIPAPI,
   Winapi.GDIPOBJ,
@@ -30,7 +30,7 @@ uses
 
   Winapi.ShellAPI,
 
-  XSuperObject,
+  XSuperObject_Copy,
 
   uOrangeUISmartSDKDeployment,
 
@@ -205,10 +205,10 @@ type
     lvNeedUseSDKs: TListView;
     btnBatchProcessSDKs: TButton;
     Button1: TButton;
-    Button6: TButton;
+    btnProcessAndroidAAR: TButton;
     odSelectAndroidAar: TOpenDialog;
     Button7: TButton;
-    btnProcessAndroidAAR: TButton;
+    btnGenerateAndroidAAR: TButton;
     procedure btnProcessDeployConfigClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -237,7 +237,7 @@ type
     procedure btnGenerateJarClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnAddAndroidAarClick(Sender: TObject);
-    procedure btnProcessAndroidAARClick(Sender: TObject);
+    procedure btnGenerateAndroidAARClick(Sender: TObject);
     procedure btnSelectProjectLaunchImageClick(Sender: TObject);
     procedure btnGenerateProjectLaunchImageEverySizeClick(Sender: TObject);
     procedure btnProcessProjectLaunchImageClick(Sender: TObject);
@@ -257,7 +257,7 @@ type
     procedure Button5Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure btnBatchProcessSDKsClick(Sender: TObject);
-    procedure Button6Click(Sender: TObject);
+    procedure btnProcessAndroidAARClick(Sender: TObject);
     procedure Button7Click(Sender: TObject);
   private
     //工程启动图片文件
@@ -280,6 +280,8 @@ type
 
 
     procedure SyncEnabledSDKS;
+
+
     { Private declarations }
   public
     function CheckProjectFileIsExist:Boolean;
@@ -818,9 +820,15 @@ end;
 
 procedure TfrmSmartDeploy.btnDeleteDeployConfigClick(Sender: TObject);
 begin
+  if FDeployConfigListDataSet.RecordCount=1 then
+  begin
+    if FDeployConfigListDataSet.Eof then Self.FDeployConfigListDataSet.First;
+  end;
+
   //删除
   if Not FDeployConfigListDataSet.Eof then
   begin
+
     Self.FDeployConfigListDataSet.Delete;
 
     SaveDataSetToDeployConfigList(Self.FProjectConfig.FDeployConfigList,
@@ -1631,7 +1639,8 @@ begin
 
 end;
 
-procedure TfrmSmartDeploy.btnProcessAndroidAARClick(Sender: TObject);
+
+procedure TfrmSmartDeploy.btnGenerateAndroidAARClick(Sender: TObject);
 var
   I:Integer;
   AProjectFilePath:String;
@@ -1723,11 +1732,21 @@ begin
         Exit;
       end;
 
-      //要生成工程文件包名的R.jar
-      AAndroidManifestXmlFilePaths.Add(AProjectGenPath+'AndroidManifest.xml');
-      AGenJarFileNamesNoExt.Add(AProjectName);
 
 
+      //要生成工程文件包名的R.jar,不需要了
+//      AAndroidManifestXmlFilePaths.Add(AProjectGenPath+'AndroidManifest.xml');
+//      AGenJarFileNamesNoExt.Add(AProjectName);
+
+//      if ATempDexedJarFilePath<>'' then
+//      begin
+//        ABatStringList.Add('del '+'"'+ATempDexedJarFilePath+'"');
+//      end;
+//C:\MyFiles\ThirdPartySDK\Android图片视频选择器dmcBig_mediapicker\Android\Release\
+//R_JAVA_TestMediaPicker_D10_4-dexed.jar
+//R_JAVA_TestMediaPicker-dexed.jar
+      DeleteFile(ExtractFilePath(AProjectFilePath)+'Android\Release\'+'R_JAVA_'+AProjectName+'-dexed'+'.jar'
+                        );
 
 
 
@@ -1790,6 +1809,7 @@ begin
 
 
       ABatStringList:=TStringList.Create;
+      //所需要生成R.java的
       for I := 0 to AAndroidManifestXmlFilePaths.Count-1 do
       begin
           //将相关的src
@@ -1891,7 +1911,7 @@ begin
 
 end;
 
-procedure TfrmSmartDeploy.Button6Click(Sender: TObject);
+procedure TfrmSmartDeploy.btnProcessAndroidAARClick(Sender: TObject);
 begin
   //因为需要计算出相对目录
   if not CheckProjectFileIsExist then Exit;
@@ -1996,7 +2016,10 @@ begin
 
   Self.btnAddAndroidJar.Caption:=Langs_AddAndroidJar[LangKind];
   Self.btnProcessAndroidJar.Caption:=Langs_ProcessAndroidJar[LangKind];
+
+  Self.btnAddAndroidAar.Caption:=Langs_AddAndroidAar[LangKind];
   Self.btnProcessAndroidAAR.Caption:=Langs_ProcessAndroidAar[LangKind];
+  Self.btnGenerateAndroidAAR.Caption:=Langs_GenerateAndroidAar[LangKind];
 
 
   Self.lblIOSLinkerOptionsHint.Caption:=Langs_IOSLinkerOptionsHint[LangKind];
@@ -2400,7 +2423,8 @@ var
   AAarRelativePath:String;
 begin
   //因为需要计算出相对目录
-  if not CheckProjectFileIsExist then Exit;
+  if not CheckProjectFileIsExist then
+     Exit;
 
   AProjectPath:=Self.edtProjectFilePath.Text;
 
@@ -2638,7 +2662,7 @@ begin
 
   //加载配置,初始表格列宽度
   Self.LoadFromINI(ExtractFilePath(Application.ExeName)+'Config.ini');
-
+//  cmbDelphiVersions
 
   Self.memIOSPlistRootNodes.Clear;
 
@@ -2920,6 +2944,8 @@ var
 begin
   AIniFile:=TIniFile.Create(AINIFilePath);
 
+  cmbDelphiVersions.Text:=AIniFile.ReadString('','JDKDelphiVersion',Self.cmbDelphiVersions.Text);
+
   Self.edtJDKDir.Text:=AIniFile.ReadString('','JDKDir',Self.edtJDKDir.Text);
   Self.edtAndroidSDKDir.Text:=AIniFile.ReadString('','AndroidSDKDir',Self.edtAndroidSDKDir.Text);
   Self.edtAndroidSDKPlatform.Text:=AIniFile.ReadString('','AndroidSDKPlatform',Self.edtAndroidSDKPlatform.Text);
@@ -2952,6 +2978,7 @@ var
 begin
   AIniFile:=TIniFile.Create(AINIFilePath);
 
+  AIniFile.WriteString('','JDKDelphiVersion',Self.cmbDelphiVersions.Text);
   AIniFile.WriteString('','JDKDir',Self.edtJDKDir.Text);
   AIniFile.WriteString('','AndroidSDKDir',Self.edtAndroidSDKDir.Text);
   AIniFile.WriteString('','AndroidSDKPlatform',Self.edtAndroidSDKPlatform.Text);
